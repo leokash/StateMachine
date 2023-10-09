@@ -69,16 +69,14 @@ enum StateMachine {
             let key = AnyHashable(event)
             mutex.async { [self] in
                 if let transition = transitions[key]?.first(where: { ($0.base as? any Transition)?.canTransition(from: current) ?? false})?.base as? any Transition {
-                    let group = DispatchGroup()
                     if let transition = transition as? any AsyncTransition {
-                        group.enter()
-                        handleAsync(transition: transition, for: group, completion: completion)
+                        handleAsync(transition: transition, completion: completion)
                         return
                     }
                             
                     if let transition = transition as? any DefaultTransition {
                         current = transition.process()
-                        completion(.success(current))
+                        completion( .success(current))
                         transition.onTransitioned(current)
                     }
                 } else {
@@ -89,31 +87,37 @@ enum StateMachine {
         
         static private let timerTimeout: TimeInterval = 5
         
-        private func handleAsync(transition: any AsyncTransition, for dispatchGroup: DispatchGroup, completion: @escaping (Result<any State, Error>) -> ()) {
+        private func handleAsync(transition: any AsyncTransition, completion: @escaping (Result<any State, Error>) -> ()) {
             var cancelled = false
+            let group = DispatchGroup()
             let timer = Timer(timeInterval: Self.timerTimeout, repeats: false) { _ in
                 cancelled = true
+                
+                group.leave()
                 transition.cancel()
-                dispatchGroup.leave()
-                completion(.failure(Errors.cancelled))
+                completion( .failure(Errors.cancelled))
                 print("processing took long... cancelling \(transition.event)")
             }
             
+            group.enter()
             RunLoop.main.add(timer, forMode: .default)
             transition.process { [weak self] newState in
                 if cancelled { return }
                 
                 timer.invalidate()
                 guard let self else {
-                    completion(.failure(Errors.machineUnavailable))
+                    completion( .failure(Errors.machineUnavailable))
                     return
                 }
                 
                 current = newState
-                dispatchGroup.leave()
-                completion(.success(newState))
+                
+                group.leave()
+                completion( .success(newState))
                 transition.onTransitioned(newState)
             }
+            
+            group.wait()
         }
         
         private static func map(transitions: [any Transition]) -> [AnyHashable: Set<AnyHashable>] {

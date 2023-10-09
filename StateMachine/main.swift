@@ -151,16 +151,18 @@ var machine2 = StateMachine.machine(with: States.liquid) {
 
 print("DSL Machine")
 
-machine2.handle(event: Action.ionize)
-machine2.handle(event: Action.freeze)
-machine2.handle(event: Action.sublimate)
-machine2.handle(event: Action.ionize)
-machine2.handle(event: Action.freeze)
-machine2.handle(event: Action.boil)
-machine2.handle(event: Action.deionize)
-machine2.handle(event: Action.condensate)
-machine2.handle(event: Action.boil)
-machine2.handle(event: Action.deposit)
-machine2.handle(event: Action.melt)
+DispatchQueue.global().async {
+    machine2.handle(event: Action.ionize)
+    machine2.handle(event: Action.freeze)
+    machine2.handle(event: Action.sublimate)
+    machine2.handle(event: Action.ionize)
+    machine2.handle(event: Action.freeze)
+    machine2.handle(event: Action.boil)
+    machine2.handle(event: Action.deionize)
+    machine2.handle(event: Action.condensate)
+    machine2.handle(event: Action.boil)
+    machine2.handle(event: Action.deposit)
+    machine2.handle(event: Action.melt)
+}
 
 RunLoop.main.run()
